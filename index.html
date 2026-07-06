@@ -1,209 +1,170 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <title>Industrial Energy Command Center</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.71.1/build/stlite.css" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy Command Center</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.24.1/plotly.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <style>
-      /* Animated Loading Screen Styling */
-      .loading-container {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        background: linear-gradient(-45deg, #0f172a, #1e1b4b, #020617);
-        color: #f8fafc;
-        font-family: system-ui, -apple-system, sans-serif;
-      }
-      .spinner {
-        width: 50px;
-        height: 50px;
-        border: 5px solid rgba(255, 255, 255, 0.1);
-        border-top: 5px solid #a855f7;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 20px;
-      }
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
+        body { background-color: #0e1117; color: #fafafa; font-family: system-ui, sans-serif; }
+        .sidebar { background-color: #262730; }
+        .card { background-color: #131720; border: 1px solid #1f2937; }
     </style>
-  </head>
-  <body>
-    <div id="root">
-      <div class="loading-container">
-        <div class="spinner"></div>
-        <h2 style="margin: 0; font-weight: 700; tracking-wide;">⚡ INITIALIZING CORE COMPUTE ENGINE</h2>
-        <p style="color: #94a3b8; font-size: 14px; margin-top: 8px;">Downloading Python runtime, Pandas, and Plotly graphics matrix. Please hold...</p>
-      </div>
+</head>
+<body>
+
+    <div id="login-page" class="flex items-center justify-center min-h-screen p-4">
+        <div class="card p-8 rounded-xl w-full max-w-md text-center shadow-2xl">
+            <h1 class="text-3xl font-black mb-2 text-purple-400 tracking-wide">🌌 ENERGY SECURITY LOCK</h1>
+            <p class="text-slate-400 text-sm mb-6">Enter access key to initialize telemetry grids</p>
+            <input type="password" id="password" placeholder="••••••••" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white mb-4 focus:outline-none focus:border-purple-500">
+            <button onclick="checkLogin()" class="w-full py-3 bg-purple-600 rounded-lg font-bold hover:bg-purple-500 transition-colors active:scale-95">Authorize Session</button>
+            <p id="login-error" class="text-red-400 text-xs mt-2 hidden">Invalid credentials. Access Denied.</p>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.71.1/build/stlite.js"></script>
+    <div id="dashboard" class="hidden min-h-screen flex flex-col lg:flex-row">
+        <aside class="sidebar w-full lg:w-80 p-6 flex flex-col justify-between border-r border-slate-800">
+            <div>
+                <h2 class="text-xl font-bold text-purple-400 mb-6">🎛️ System Filters</h2>
+                
+                <div class="mb-5">
+                    <label class="text-xs text-slate-400 uppercase font-bold tracking-wider">Infrastructure Group</label>
+                    <select id="filter-func" onchange="updateDashboard()" class="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded text-sm text-slate-100 focus:outline-none focus:border-purple-500"></select>
+                </div>
+
+                <div class="mb-6">
+                    <label class="text-xs text-slate-400 uppercase font-bold tracking-wider">Distribution Panel ID</label>
+                    <select id="filter-panel" onchange="updateDashboard()" class="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded text-sm text-slate-100 focus:outline-none focus:border-purple-500"></select>
+                </div>
+            </div>
+            
+            <button onclick="window.location.reload()" class="w-full py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded text-xs text-slate-400 hover:text-white transition-colors">Lock System Session</button>
+        </aside>
+
+        <main class="flex-1 p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full">
+            <header>
+                <h1 class="text-2xl lg:text-3xl font-black text-slate-100">⚡ INDUSTRIAL ENERGY TELEMETRY PLATFORM</h1>
+                <p class="text-xs lg:text-sm text-slate-400 mt-1">Active live streaming dashboard syncing directly from your Google Sheet storage arrays.</p>
+            </header>
+            <hr class="border-slate-800">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="card p-5 rounded-lg shadow-sm"><p class="text-xs text-slate-400 font-medium">Current Draw (Active Power)</p><p id="kpi-power" class="text-2xl font-bold mt-1 text-slate-100">0.0 W</p></div>
+                <div class="card p-5 rounded-lg shadow-sm"><p class="text-xs text-slate-400 font-medium">Accumulated Net Intake</p><p id="kpi-energy" class="text-2xl font-bold mt-1 text-slate-100">0.00 kWh</p></div>
+                <div class="card p-5 rounded-lg shadow-sm"><p class="text-xs text-slate-400 font-medium">System Machine Load Runtime</p><p id="kpi-runtime" class="text-2xl font-bold mt-1 text-slate-100">0.0 Hrs</p></div>
+                <div class="card p-5 rounded-lg shadow-sm"><p class="text-xs text-slate-400 font-medium">Monitored Branch Nodes</p><p id="kpi-nodes" class="text-2xl font-bold mt-1 text-slate-100">0 Channels</p></div>
+            </div>
+
+            <div class="card p-6 rounded-lg">
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">📈 Load Profile Flux Trends</h3>
+                <div id="line-chart" class="w-full" style="height: 400px;"></div>
+            </div>
+
+            <div class="card p-6 rounded-lg">
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">📊 Three-Phase Current Balance Vector</h3>
+                <div id="bar-chart" class="w-full" style="height: 350px;"></div>
+            </div>
+        </main>
+    </div>
+
     <script>
-      stlite.mount({
-        requirements: ["pandas", "plotly"], 
-        entrypoint: "app.py", // 🌟 Crucial fix: explicitly declare what file to launch
-        files: {
-          "app.py": `
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+        const PASSWORD_KEY = "secret123";
+        // 🌟 PASTE YOUR GOOGLE SHEET CSV LINK HERE
+        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0XRXf0N1pS7sFDcdT-CzjJWyBbBe1LTPWDzWr9QIxBJv1wxDTEub2LcCCk90asnP1tixT7rWpseq8/pub?gid=0&single=true&output=csv";
 
-# 1. Dashboard Framework Configurations
-st.set_page_config(page_title="Energy Command Center", page_icon="⚡", layout="wide")
+        let rawData = [];
 
-# 2. Portal Security Authentication Layer
-if "authenticated" not in st.session_state:
-    st.session_state["authenticated"] = False
-
-if not st.session_state["authenticated"]:
-    st.markdown("<h1 style='text-align: center; color: #a855f7; margin-top: 60px; font-weight: 800;'>🌌 ENERGY PORTAL SECURE LOCK</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #94a3b8;'>Authorized personnel only. Please input the system key to load telemetry grids.</p>", unsafe_allow_html=True)
-    st.write("---")
-    
-    _, col2, _ = st.columns([1, 1.2, 1])
-    with col2:
-        password = st.text_input("Operational Access Key", type="password", placeholder="••••••••")
-        login_btn = st.button("Initialize Secure Dashboard Connection", use_container_width=True)
-        
-        if login_btn:
-            if password == "secret123":
-                st.session_state["authenticated"] = True
-                st.rerun()
-            else:
-                st.error("Access Denied. Passcode trace rejected.")
-    st.stop()
-
-# 3. Connected Google Sheet Telemetry Core 
-# 🌟 PASTE YOUR LIVE GOOGLE SHEET CSV LINK HERE
-GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0XRXf0N1pS7sFDcdT-CzjJWyBbBe1LTPWDzWr9QIxBJv1wxDTEub2LcCCk90asnP1tixT7rWpseq8/pub?gid=0&single=true&output=csv"
-
-@st.cache_data(ttl=15)
-def fetch_energy_data():
-    try:
-        data = pd.read_csv(GOOGLE_SHEET_CSV_URL)
-        data['timestamp'] = pd.to_datetime(data['timestamp'])
-        data = data.sort_values('timestamp')
-        return data
-    except Exception as e:
-        return pd.DataFrame()
-
-df = fetch_energy_data()
-
-if df.empty:
-    st.info("🔄 Connecting to spreadsheet data cloud layer... Please confirm your public CSV URL is pasted onto Line 71.")
-    st.stop()
-
-# 4. Global Core Metrics Workspace Header
-st.title("⚡ INDUSTRIAL ENERGY TELEMETRY PLATFORM")
-st.caption("Active monitoring interface reading live rows directly from your unified cloud spreadsheet layer.")
-st.write("---")
-
-# 5. Sidebar Command Console Filters (Slicers)
-with st.sidebar:
-    st.markdown("### 🎛️ Dynamic Slicers Panel")
-    
-    func_options = ["All Systems"] + sorted(list(df['function'].dropna().unique()))
-    selected_func = st.selectbox("Select Core Infrastructure Group", func_options)
-    
-    panel_options = ["All Panels"] + sorted(list(df['panel_id'].dropna().unique()))
-    selected_panel = st.selectbox("Select Distribution Panel ID", panel_options)
-    
-    st.write("---")
-    if st.button("Lock System Console Session", use_container_width=True):
-        st.session_state["authenticated"] = False
-        st.rerun()
-
-# Apply conditional array matrices securely across selections
-filtered_df = df.copy()
-if selected_func != "All Systems":
-    filtered_df = filtered_df[filtered_df['function'] == selected_func]
-if selected_panel != "All Panels":
-    filtered_df = filtered_df[filtered_df['panel_id'] == selected_panel]
-
-if filtered_df.empty:
-    st.warning("⚠️ No operational records match the specific Slicer criteria combinations selected.")
-    st.stop()
-
-# 6. Industrial KPI Summary Card Blocks
-metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
-
-with metric_col1:
-    latest_power = filtered_df['active_power_w'].iloc[-1] if not filtered_df.empty else 0
-    st.metric(label="Current Draw (Active Power)", value=f"{latest_power:,.1f} W")
-
-with metric_col2:
-    max_energy = filtered_df['total_energy_kwh'].max() - filtered_df['total_energy_kwh'].min()
-    st.metric(label="Accumulated Net Intake", value=f"{max_energy:,.2f} kWh")
-
-with metric_col3:
-    avg_load_hrs = filtered_df['load_run_hours'].max() if not filtered_df.empty else 0
-    st.metric(label="System Machine Load Runtime", value=f"{avg_load_hrs:,.1f} Hrs")
-
-with metric_col4:
-    active_nodes = filtered_df['function'].nunique()
-    st.metric(label="Monitored Branch Nodes", value=f"{active_nodes} Channels")
-
-st.write("---")
-
-# 7. Analytical Visualization Layer
-chart_tab1, chart_tab2 = st.tabs(["📈 Load Profile Trends", "📊 Phase Current Balancing Ledger"])
-
-with chart_tab1:
-    st.subheader("Active Power Demands Profile (W) Over Time")
-    fig_line = px.line(
-        filtered_df,
-        x='timestamp',
-        y='active_power_w',
-        color='function',
-        title="Dynamic Load Flux Cycle Metrics",
-        template="plotly_dark",
-        color_discrete_sequence=px.colors.qualitative.Bold
-    )
-    fig_line.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        hovermode="x unified"
-    )
-    st.plotly_chart(fig_line, use_container_width=True)
-
-with chart_tab2:
-    st.subheader("Three-Phase Current Amp Balance Profiles Matrix")
-    
-    avg_r = filtered_df['current_r_a'].mean()
-    avg_y = filtered_df['current_y_a'].mean()
-    avg_b = filtered_df['current_b_a'].mean()
-    
-    fig_bar = go.Figure(data=[
-        go.Bar(name='Phase R (Red)', x=['Current Phases Load Vector'], y=[avg_r], marker_color='#ef4444'),
-        go.Bar(name='Phase Y (Yellow)', x=['Current Phases Load Vector'], y=[avg_y], marker_color='#eab308'),
-        go.Bar(name='Phase B (Blue)', x=['Current Phases Load Vector'], y=[avg_b], marker_color='#3b82f6')
-    ])
-    fig_bar.update_layout(
-        template="plotly_dark",
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        barmode='group',
-        yaxis_title="Average Amperage Values (Amps)"
-    )
-    st.plotly_chart(fig_bar, use_container_width=True)
-
-st.write("---")
-
-# 8. Lower Data Registry Ledger Explorer Table view
-with st.expander("📋 Open Raw Telemetry Record Registry Ledger Explorer"):
-    st.dataframe(
-        filtered_df.sort_values('timestamp', ascending=False),
-        use_container_width=True,
-        hide_index=True
-    )
-`
+        function checkLogin() {
+            const input = document.getElementById('password').value;
+            if (input === PASSWORD_KEY) {
+                document.getElementById('login-page').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'flex';
+                loadSpreadsheetData();
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
         }
-      }, document.getElementById("root"));
+
+        function loadSpreadsheetData() {
+            Papa.parse(CSV_URL, {
+                download: true,
+                header: true,
+                dynamicTyping: true,
+                complete: function(results) {
+                    rawData = results.data.filter(row => row.timestamp);
+                    populateDropdowns();
+                    updateDashboard();
+                }
+            });
+        }
+
+        function populateDropdowns() {
+            const funcs = [...new Set(rawData.map(r => r.function))].filter(Boolean).sort();
+            const panels = [...new Set(rawData.map(r => r.panel_id))].filter(Boolean).sort();
+
+            const fSel = document.getElementById('filter-func');
+            const pSel = document.getElementById('filter-panel');
+
+            fSel.innerHTML = '<option value="All">All Systems</option>' + funcs.map(f => `<option value="${f}">${f}</option>`).join('');
+            pSel.innerHTML = '<option value="All">All Panels</option>' + panels.map(p => `<option value="${p}">${p}</option>`).join('');
+        }
+
+        function updateDashboard() {
+            const selectedFunc = document.getElementById('filter-func').value;
+            const selectedPanel = document.getElementById('filter-panel').value;
+
+            let filtered = rawData.filter(row => {
+                return (selectedFunc === "All" || row.function === selectedFunc) &&
+                       (selectedPanel === "All" || row.panel_id === selectedPanel);
+            });
+
+            if(filtered.length === 0) return;
+
+            // 1. KPI Computations
+            const latestPower = filtered[filtered.length - 1].active_power_w || 0;
+            const energies = filtered.map(r => r.total_energy_kwh).filter(Number);
+            const netEnergy = energies.length ? (Math.max(...energies) - Math.min(...energies)) : 0;
+            const runtimes = filtered.map(r => r.load_run_hours).filter(Number);
+            const maxRuntime = runtimes.length ? Math.max(...runtimes) : 0;
+            const uniqueNodes = [...new Set(filtered.map(r => r.function))].length;
+
+            document.getElementById('kpi-power').innerText = `${latestPower.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} W`;
+            document.getElementById('kpi-energy').innerText = `${netEnergy.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} kWh`;
+            document.getElementById('kpi-runtime').innerText = `${maxRuntime.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})} Hrs`;
+            document.getElementById('kpi-nodes').innerText = `${uniqueNodes} Channels`;
+
+            // 2. Render Plotly Line Graph
+            const tracks = {};
+            filtered.forEach(row => {
+                if(!tracks[row.function]) tracks[row.function] = { x: [], y: [], type: 'scatter', mode: 'lines', name: row.function };
+                tracks[row.function].x.push(row.timestamp);
+                tracks[row.function].y.push(row.active_power_w);
+            });
+
+            const layoutOptions = {
+                paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+                template: 'plotly_dark', margin: { t: 20, b: 40, l: 60, r: 20 },
+                xaxis: { gridcolor: '#1f2937' }, yaxis: { gridcolor: '#1f2937' }
+            };
+
+            Plotly.newPlot('line-chart', Object.values(tracks), layoutOptions, {responsive: true});
+
+            // 3. Render Bar Graph (Phase Balancing Mean)
+            const meanR = filtered.reduce((acc, r) => acc + (r.current_r_a || 0), 0) / filtered.length;
+            const meanY = filtered.reduce((acc, r) => acc + (r.current_y_a || 0), 0) / filtered.length;
+            const meanB = filtered.reduce((acc, r) => acc + (r.current_b_a || 0), 0) / filtered.length;
+
+            const barData = [
+                { x: ['Phase R'], y: [meanR], type: 'bar', name: 'R (Red)', marker: {color: '#ef4444'} },
+                { x: ['Phase Y'], y: [meanY], type: 'bar', name: 'Y (Yellow)', marker: {color: '#eab308'} },
+                { x: ['Phase B'], y: [meanB], type: 'bar', name: 'B (Blue)', marker: {color: '#3b82f6'} }
+            ];
+
+            Plotly.newPlot('bar-chart', barData, { ...layoutOptions, barmode: 'group' }, {responsive: true});
+        }
     </script>
-  </body>
+</body>
 </html>
