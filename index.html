@@ -1,220 +1,141 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cinematic Vizzu Command Center</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script type="module">
-        import Vizzu from 'https://cdn.jsdelivr.net/npm/vizzu@0.10.0/dist/vizzu.min.js';
-        window.Vizzu = Vizzu;
-    </script>
-    <style>
-        .cinematic-bg {
-            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #2e1065, #020617);
-            background-size: 400% 400%;
-            animation: gradientMove 15s ease infinite;
-        }
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        .glassmorphism {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-    </style>
-</head>
-<body class="cinematic-bg text-slate-100 min-h-screen font-sans">
-
-    <div id="login-page" class="flex items-center justify-center min-h-screen p-4 transition-all duration-1000 ease-in-out">
-        <div class="glassmorphism p-8 rounded-2xl w-full max-w-md text-center border shadow-2xl">
-            <h1 class="text-3xl font-extrabold mb-2 tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-300">COMMAND CENTER</h1>
-            <p class="text-slate-400 text-sm mb-6">Enter credentials to unlock secure Vizzu metrics</p>
-            
-            <div class="space-y-4 text-left">
-                <div>
-                    <label class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Password</label>
-                    <input type="password" id="password" value="" placeholder="••••••••" class="w-full mt-1 px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg focus:outline-none focus:border-purple-500 text-white transition-colors">
-                </div>
-                <button onclick="checkLogin()" class="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg font-bold tracking-wide hover:from-purple-500 hover:to-indigo-500 transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
-                    Access Portal
-                </button>
-                <p id="login-error" class="text-red-400 text-xs text-center mt-2 hidden">Invalid credentials. Try again.</p>
-            </div>
-        </div>
-    </div>
-
-    <div id="dashboard" class="hidden p-6 max-w-7xl mx-auto transition-all duration-1000 opacity-0 transform translate-y-4">
-        <header class="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
-            <div>
-                <h1 class="text-2xl font-black tracking-wide text-indigo-400">📊 VIZZU LIVE METRICS</h1>
-                <p class="text-xs text-slate-400 mt-1">Data morphs automatically based on criteria</p>
-            </div>
-            <button onclick="logout()" class="px-4 py-1.5 glassmorphism rounded-md text-xs text-slate-400 hover:text-white transition-colors">Lock Session</button>
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div class="glassmorphism p-5 rounded-xl space-y-5 h-fit">
-                <h2 class="text-md font-bold tracking-wide text-purple-400 border-b border-slate-800 pb-2">🎛️ SYSTEM FILTERS</h2>
-                
-                <div>
-                    <label class="text-xs text-slate-400 uppercase font-semibold" id="label-f1">Filter 1</label>
-                    <select id="filter-region" onchange="updateDashboard()" class="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded text-sm text-slate-200 focus:outline-none focus:border-purple-500">
-                        <option value="All">Loading...</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="text-xs text-slate-400 uppercase font-semibold" id="label-f2">Filter 2</label>
-                    <select id="filter-category" onchange="updateDashboard()" class="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded text-sm text-slate-200 focus:outline-none focus:border-purple-500">
-                        <option value="All">Loading...</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="lg:col-span-3 space-y-6">
-                <div class="glassmorphism p-6 rounded-xl shadow-inner bg-slate-950/20">
-                    <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Cinematic Morph Flow</h3>
-                    <div id="vizzu-chart" style="width: 100%; height: 450px;"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Streamlit Command Center</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.71.1/build/stlite.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.71.1/build/stlite.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
     <script>
-        const DASHBOARD_PASSWORD = "secret123";
+      stlite.mount({
+        // Automatically injects requirements into the browser environment
+        requirements: ["pandas", "plotly"], 
+        files: {
+          "app.py": `
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+
+# 1. Page Frame Config
+st.set_page_config(page_title="Streamlit Metrics Engine", page_icon="⚡", layout="wide")
+
+# 2. Secure Access Layer 
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+if not st.session_state["authenticated"]:
+    st.markdown("<h1 style='text-align: center; color: #a855f7; margin-top: 50px;'>🌌 PORTAL SECURITY LOCK</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #94a3b8;'>Enter operational credentials to open secure analytics streams.</p>", unsafe_allow_html=True)
+    st.write("---")
+    
+    _, col2, _ = st.columns([1, 1.5, 1])
+    with col2:
+        password = st.text_input("Access Key", type="password", placeholder="••••••••")
+        login_btn = st.button("Authorize Session", use_container_width=True)
         
-        // 🌟 PASTE YOUR PUBLIC GOOGLE SHEET CSV LINK HERE
-        const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0XRXf0N1pS7sFDcdT-CzjJWyBbBe1LTPWDzWr9QIxBJv1wxDTEub2LcCCk90asnP1tixT7rWpseq8/pub?gid=0&single=true&output=csv";
+        if login_btn:
+            if password == "secret123": # Change your portal password here
+                st.session_state["authenticated"] = True
+                st.rerun()
+            else:
+                st.error("Invalid passcode credential. Connection refused.")
+    st.stop()
 
-        let chart = null;
-        let originalData = [];
-        let keyCol1 = "";
-        let keyCol2 = "";
-        let valCol = "";
+# 3. Dynamic Cloud Database Link (Google Sheets API Connection)
+# 🌟 PASTE YOUR PUBLIC GOOGLE SHEET CSV LINK HERE
+GOOGLE_SHEET_CSV_URL = "PASTE_YOUR_PUBLIC_GOOGLE_SHEET_CSV_LINK_HERE"
 
-        // Wait for Vizzu script layer block to fully load globally
-        window.addEventListener('load', () => {
-            window.checkLogin = function() {
-                const pass = document.getElementById('password').value;
-                if (pass === DASHBOARD_PASSWORD) {
-                    document.getElementById('login-page').classList.add('hidden');
-                    const dash = document.getElementById('dashboard');
-                    dash.classList.remove('hidden');
-                    setTimeout(() => { dash.classList.remove('opacity-0', 'translate-y-4'); }, 50);
-                    
-                    initVizzu();
-                } else {
-                    document.getElementById('login-error').classList.remove('hidden');
-                }
-            }
-        });
+@st.cache_data(ttl=30) # Background caching keeps transitions fast but updates every 30 secs
+def fetch_live_records():
+    try:
+        return pd.read_csv(GOOGLE_SHEET_CSV_URL)
+    except Exception:
+        return pd.DataFrame()
 
-        function logout() { window.location.reload(); }
+df = fetch_live_records()
 
-        async function initVizzu() {
-            try {
-                // Initialize Vizzu class
-                chart = new window.Vizzu('vizzu-chart');
-                await chart.initializing;
-                
-                // Fetch dynamic Google Sheets CSV data payload
-                const response = await fetch(GOOGLE_SHEET_URL);
-                const csvText = await response.text();
-                
-                processData(csvText);
-            } catch (err) {
-                console.error("Vizzu Pipeline Init Failed:", err);
-            }
+if df.empty:
+    st.info("🔄 Initiating handshake protocols... Please verify your Google Sheet CSV URL configuration link.")
+    st.stop()
+
+# Auto-detect data layout structures safely
+cols = list(df.columns)
+filter_1_name = cols[0]
+filter_2_name = cols[1]
+
+# Identify first numeric column for mapping metric aggregates automatically
+metric_name = next((c for c in cols if pd.api.types.is_numeric_dtype(df[c])), cols[-1])
+
+# 4. Streamlit Dashboard Shell
+st.title("📊 OPERATIONAL CONTROL LEDGER")
+st.caption("Live streaming connection established. Changes made on Google Sheets reflect automatically here.")
+st.write("---")
+
+# Left Command Panel Sidebar Layout
+with st.sidebar:
+    st.markdown("### 🎛️ Data Slicers")
+    
+    # Filter One
+    opt_1 = ["All"] + list(df[filter_1_name].dropna().unique())
+    select_1 = st.selectbox(f"Filter by {filter_1_name}", opt_1)
+    
+    # Filter Two
+    opt_2 = ["All"] + list(df[filter_2_name].dropna().unique())
+    select_2 = st.selectbox(f"Filter by {filter_2_name}", opt_2)
+    
+    st.write("---")
+    if st.button("Terminate Session / Lock", use_container_width=True):
+        st.session_state["authenticated"] = False
+        st.rerun()
+
+# Apply array masks against dynamic filters
+filtered_df = df.copy()
+if select_1 != "All":
+    filtered_df = filtered_df[filtered_df[filter_1_name] == select_1]
+if select_2 != "All":
+    filtered_df = filtered_df[filtered_df[filter_2_name] == select_2]
+
+# 5. Render Metric Visualizations Content Panels
+chart_col, matrix_col = st.columns([2.2, 1])
+
+with chart_col:
+    st.subheader("📈 Interactive Movement Trends")
+    if not filtered_df.empty:
+        # Render a gorgeous, animated Plotly chart
+        fig = px.bar(
+            filtered_df,
+            x=filter_2_name,
+            y=metric_name,
+            color=filter_1_name,
+            barmode="group",
+            template="plotly_dark",
+            color_discrete_sequence=px.colors.qualitative.Pastel
+        )
+        
+        # Transparent canvas background settings with entry slide transitions
+        fig.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            transition_duration=400, # Smoothly glides bars when filters are adjusted
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("No structural database blocks align with active filters configuration.")
+
+with matrix_col:
+    st.subheader("📋 Ledger Registry Rows")
+    st.dataframe(
+        filtered_df, 
+        use_container_width=True, 
+        hide_index=True
+    )
+`
         }
-
-        function processData(csvText) {
-            const lines = csvText.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-            const headers = lines[0].split(",").map(h => h.trim());
-            
-            keyCol1 = headers[0];
-            keyCol2 = headers[1];
-            valCol = headers.find((h, idx) => idx > 1) || headers[headers.length - 1];
-
-            document.getElementById('label-f1').innerText = keyCol1;
-            document.getElementById('label-f2').innerText = keyCol2;
-
-            originalData = lines.slice(1).map(line => {
-                const values = line.split(",");
-                const obj = {};
-                headers.forEach((h, i) => {
-                    let val = values[i] ? values[i].trim() : "";
-                    if (!isNaN(val) && val !== "") val = Number(val);
-                    obj[h] = val;
-                });
-                return obj;
-            });
-
-            populateFilters();
-            updateDashboard(true); // Draw initial layout state
-        }
-
-        function populateFilters() {
-            const f1 = [...new Set(originalData.map(d => d[keyCol1]))].filter(Boolean);
-            const f2 = [...new Set(originalData.map(d => d[keyCol2]))].filter(Boolean);
-            
-            const s1 = document.getElementById('filter-region');
-            const s2 = document.getElementById('filter-category');
-            
-            s1.innerHTML = `<option value="All">All ${keyCol1}s</option>`;
-            s2.innerHTML = `<option value="All">All ${keyCol2}s</option>`;
-            
-            f1.forEach(v => s1.innerHTML += `<option value="${v}">${v}</option>`);
-            f2.forEach(v => s2.innerHTML += `<option value="${v}">${v}</option>`);
-        }
-
-        async function updateDashboard(isFirstLoad = false) {
-            if (!chart) return;
-
-            const sel1 = document.getElementById('filter-region').value;
-            const sel2 = document.getElementById('filter-category').value;
-
-            // Apply independent multi-column filters logic securely 
-            let filtered = originalData.filter(item => {
-                const m1 = (sel1 === "All" || String(item[keyCol1]) === sel1);
-                const m2 = (sel2 === "All" || String(item[keyCol2]) === sel2);
-                return m1 && m2;
-            });
-
-            // Re-format arrays for Vizzu data series matrix input
-            const dataSeries = {
-                series: [
-                    { name: keyCol1, type: 'dimension', values: filtered.map(d => String(d[keyCol1])) },
-                    { name: keyCol2, type: 'dimension', values: filtered.map(d => String(d[keyCol2])) },
-                    { name: valCol, type: 'measure', values: filtered.map(d => Number(d[valCol]) || 0) }
-                ]
-            };
-
-            // Trigger the absolute fluid morph layout animation frames!
-            await chart.animate({
-                data: dataSeries,
-                config: {
-                    channels: {
-                        y: { set: [valCol] },
-                        x: { set: [keyCol2] },
-                        color: { set: [keyCol1] }
-                    },
-                    title: `Dynamic Metrics Flow Analysis`,
-                    geometry: 'rectangle'
-                },
-                style: {
-                    title: { fontSize: '14px', color: '#94a3b8' },
-                    plot: {
-                        marker: { colorPalette: '#c084fc #6366f1 #38bdf8 #34d399 #f472b6' },
-                        xAxis: { label: { color: '#94a3b8' } },
-                        yAxis: { label: { color: '#94a3b8' } }
-                    }
-                }
-            }, isFirstLoad ? 0 : 800); // 800ms liquid-smooth canvas morph time window
-        }
+      }, document.getElementById("root"));
     </script>
-</body>
+  </body>
 </html>
