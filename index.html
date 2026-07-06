@@ -1,18 +1,51 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>Industrial Energy Command Center</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.71.1/build/stlite.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.71.1/build/stlite.js"></script>
+    <style>
+      /* Animated Loading Screen Styling */
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(-45deg, #0f172a, #1e1b4b, #020617);
+        color: #f8fafc;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid rgba(255, 255, 255, 0.1);
+        border-top: 5px solid #a855f7;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <h2 style="margin: 0; font-weight: 700; tracking-wide;">⚡ INITIALIZING CORE COMPUTE ENGINE</h2>
+        <p style="color: #94a3b8; font-size: 14px; margin-top: 8px;">Downloading Python runtime, Pandas, and Plotly graphics matrix. Please hold...</p>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.71.1/build/stlite.js"></script>
     <script>
       stlite.mount({
-        // Securely pre-installs Python analytics packages directly inside the user's browser
         requirements: ["pandas", "plotly"], 
+        entrypoint: "app.py", // 🌟 Crucial fix: explicitly declare what file to launch
         files: {
           "app.py": `
 import streamlit as st
@@ -38,7 +71,7 @@ if not st.session_state["authenticated"]:
         login_btn = st.button("Initialize Secure Dashboard Connection", use_container_width=True)
         
         if login_btn:
-            if password == "secret123": # Feel free to modify this password key
+            if password == "secret123":
                 st.session_state["authenticated"] = True
                 st.rerun()
             else:
@@ -47,13 +80,12 @@ if not st.session_state["authenticated"]:
 
 # 3. Connected Google Sheet Telemetry Core 
 # 🌟 PASTE YOUR LIVE GOOGLE SHEET CSV LINK HERE
-GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0XRXf0N1pS7sFDcdT-CzjJWyBbBe1LTPWDzWr9QIxBJv1wxDTEub2LcCCk90asnP1tixT7rWpseq8/pub?gid=0&single=true&output=csv"
+GOOGLE_SHEET_CSV_URL = "PASTE_YOUR_PUBLIC_GOOGLE_SHEET_CSV_LINK_HERE"
 
-@st.cache_data(ttl=30) # Automatic background memory refresher triggers every 30 seconds
+@st.cache_data(ttl=15)
 def fetch_energy_data():
     try:
         data = pd.read_csv(GOOGLE_SHEET_CSV_URL)
-        # Parse and sort timestamps cleanly to guarantee linear trend paths
         data['timestamp'] = pd.to_datetime(data['timestamp'])
         data = data.sort_values('timestamp')
         return data
@@ -63,7 +95,7 @@ def fetch_energy_data():
 df = fetch_energy_data()
 
 if df.empty:
-    st.info("🔄 Re-establishing handshake arrays... Please verify that your Google Sheet CSV URL link is pasted correctly on line 42.")
+    st.info("🔄 Connecting to spreadsheet data cloud layer... Please confirm your public CSV URL is pasted onto Line 71.")
     st.stop()
 
 # 4. Global Core Metrics Workspace Header
@@ -75,12 +107,10 @@ st.write("---")
 with st.sidebar:
     st.markdown("### 🎛️ Dynamic Slicers Panel")
     
-    # Filter One: Operational Subsystems / Functions
-    func_options = ["All Systems"] + list(df['function'].dropna().unique())
+    func_options = ["All Systems"] + sorted(list(df['function'].dropna().unique()))
     selected_func = st.selectbox("Select Core Infrastructure Group", func_options)
     
-    # Filter Two: Physical Panel Identifiers
-    panel_options = ["All Panels"] + list(df['panel_id'].dropna().unique())
+    panel_options = ["All Panels"] + sorted(list(df['panel_id'].dropna().unique()))
     selected_panel = st.selectbox("Select Distribution Panel ID", panel_options)
     
     st.write("---")
@@ -120,12 +150,11 @@ with metric_col4:
 
 st.write("---")
 
-# 7. Cinematic Analytical Visualization Layer
+# 7. Analytical Visualization Layer
 chart_tab1, chart_tab2 = st.tabs(["📈 Load Profile Trends", "📊 Phase Current Balancing Ledger"])
 
 with chart_tab1:
-    st.subheader("Active Power Demands Profile ($W$) Over Time")
-    # Interactive time-series line plot with Plotly dark styling template
+    st.subheader("Active Power Demands Profile (W) Over Time")
     fig_line = px.line(
         filtered_df,
         x='timestamp',
@@ -138,15 +167,13 @@ with chart_tab1:
     fig_line.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        hovermode="x unified",
-        transition_duration=400
+        hovermode="x unified"
     )
     st.plotly_chart(fig_line, use_container_width=True)
 
 with chart_tab2:
     st.subheader("Three-Phase Current Amp Balance Profiles Matrix")
     
-    # Calculate electrical mean current loads across phases
     avg_r = filtered_df['current_r_a'].mean()
     avg_y = filtered_df['current_y_a'].mean()
     avg_b = filtered_df['current_b_a'].mean()
@@ -161,8 +188,7 @@ with chart_tab2:
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         barmode='group',
-        yaxis_title="Average Amperage Values (Amps)",
-        transition_duration=400
+        yaxis_title="Average Amperage Values (Amps)"
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
