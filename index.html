@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cinematic Vizzu Command Center</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script type="module">
+        import Vizzu from 'https://cdn.jsdelivr.net/npm/vizzu@0.10.0/dist/vizzu.min.js';
+        window.Vizzu = Vizzu;
+    </script>
+    <style>
+        .cinematic-bg {
+            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #2e1065, #020617);
+            background-size: 400% 400%;
+            animation: gradientMove 15s ease infinite;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="cinematic-bg text-slate-100 min-h-screen font-sans">
+
+    <div id="login-page" class="flex items-center justify-center min-h-screen p-4 transition-all duration-1000 ease-in-out">
+        <div class="glassmorphism p-8 rounded-2xl w-full max-w-md text-center border shadow-2xl">
+            <h1 class="text-3xl font-extrabold mb-2 tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-300">COMMAND CENTER</h1>
+            <p class="text-slate-400 text-sm mb-6">Enter credentials to unlock secure Vizzu metrics</p>
+            
+            <div class="space-y-4 text-left">
+                <div>
+                    <label class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Password</label>
+                    <input type="password" id="password" value="" placeholder="••••••••" class="w-full mt-1 px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg focus:outline-none focus:border-purple-500 text-white transition-colors">
+                </div>
+                <button onclick="checkLogin()" class="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg font-bold tracking-wide hover:from-purple-500 hover:to-indigo-500 transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+                    Access Portal
+                </button>
+                <p id="login-error" class="text-red-400 text-xs text-center mt-2 hidden">Invalid credentials. Try again.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboard" class="hidden p-6 max-w-7xl mx-auto transition-all duration-1000 opacity-0 transform translate-y-4">
+        <header class="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
+            <div>
+                <h1 class="text-2xl font-black tracking-wide text-indigo-400">📊 VIZZU LIVE METRICS</h1>
+                <p class="text-xs text-slate-400 mt-1">Data morphs automatically based on criteria</p>
+            </div>
+            <button onclick="logout()" class="px-4 py-1.5 glassmorphism rounded-md text-xs text-slate-400 hover:text-white transition-colors">Lock Session</button>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="glassmorphism p-5 rounded-xl space-y-5 h-fit">
+                <h2 class="text-md font-bold tracking-wide text-purple-400 border-b border-slate-800 pb-2">🎛️ SYSTEM FILTERS</h2>
+                
+                <div>
+                    <label class="text-xs text-slate-400 uppercase font-semibold" id="label-f1">Filter 1</label>
+                    <select id="filter-region" onchange="updateDashboard()" class="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+                        <option value="All">Loading...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-xs text-slate-400 uppercase font-semibold" id="label-f2">Filter 2</label>
+                    <select id="filter-category" onchange="updateDashboard()" class="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+                        <option value="All">Loading...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3 space-y-6">
+                <div class="glassmorphism p-6 rounded-xl shadow-inner bg-slate-950/20">
+                    <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Cinematic Morph Flow</h3>
+                    <div id="vizzu-chart" style="width: 100%; height: 450px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DASHBOARD_PASSWORD = "secret123";
+        
+        // 🌟 PASTE YOUR PUBLIC GOOGLE SHEET CSV LINK HERE
+        const GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0XRXf0N1pS7sFDcdT-CzjJWyBbBe1LTPWDzWr9QIxBJv1wxDTEub2LcCCk90asnP1tixT7rWpseq8/pub?gid=0&single=true&output=csv";
+
+        let chart = null;
+        let originalData = [];
+        let keyCol1 = "";
+        let keyCol2 = "";
+        let valCol = "";
+
+        // Wait for Vizzu script layer block to fully load globally
+        window.addEventListener('load', () => {
+            window.checkLogin = function() {
+                const pass = document.getElementById('password').value;
+                if (pass === DASHBOARD_PASSWORD) {
+                    document.getElementById('login-page').classList.add('hidden');
+                    const dash = document.getElementById('dashboard');
+                    dash.classList.remove('hidden');
+                    setTimeout(() => { dash.classList.remove('opacity-0', 'translate-y-4'); }, 50);
+                    
+                    initVizzu();
+                } else {
+                    document.getElementById('login-error').classList.remove('hidden');
+                }
+            }
+        });
+
+        function logout() { window.location.reload(); }
+
+        async function initVizzu() {
+            try {
+                // Initialize Vizzu class
+                chart = new window.Vizzu('vizzu-chart');
+                await chart.initializing;
+                
+                // Fetch dynamic Google Sheets CSV data payload
+                const response = await fetch(GOOGLE_SHEET_URL);
+                const csvText = await response.text();
+                
+                processData(csvText);
+            } catch (err) {
+                console.error("Vizzu Pipeline Init Failed:", err);
+            }
+        }
+
+        function processData(csvText) {
+            const lines = csvText.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+            const headers = lines[0].split(",").map(h => h.trim());
+            
+            keyCol1 = headers[0];
+            keyCol2 = headers[1];
+            valCol = headers.find((h, idx) => idx > 1) || headers[headers.length - 1];
+
+            document.getElementById('label-f1').innerText = keyCol1;
+            document.getElementById('label-f2').innerText = keyCol2;
+
+            originalData = lines.slice(1).map(line => {
+                const values = line.split(",");
+                const obj = {};
+                headers.forEach((h, i) => {
+                    let val = values[i] ? values[i].trim() : "";
+                    if (!isNaN(val) && val !== "") val = Number(val);
+                    obj[h] = val;
+                });
+                return obj;
+            });
+
+            populateFilters();
+            updateDashboard(true); // Draw initial layout state
+        }
+
+        function populateFilters() {
+            const f1 = [...new Set(originalData.map(d => d[keyCol1]))].filter(Boolean);
+            const f2 = [...new Set(originalData.map(d => d[keyCol2]))].filter(Boolean);
+            
+            const s1 = document.getElementById('filter-region');
+            const s2 = document.getElementById('filter-category');
+            
+            s1.innerHTML = `<option value="All">All ${keyCol1}s</option>`;
+            s2.innerHTML = `<option value="All">All ${keyCol2}s</option>`;
+            
+            f1.forEach(v => s1.innerHTML += `<option value="${v}">${v}</option>`);
+            f2.forEach(v => s2.innerHTML += `<option value="${v}">${v}</option>`);
+        }
+
+        async function updateDashboard(isFirstLoad = false) {
+            if (!chart) return;
+
+            const sel1 = document.getElementById('filter-region').value;
+            const sel2 = document.getElementById('filter-category').value;
+
+            // Apply independent multi-column filters logic securely 
+            let filtered = originalData.filter(item => {
+                const m1 = (sel1 === "All" || String(item[keyCol1]) === sel1);
+                const m2 = (sel2 === "All" || String(item[keyCol2]) === sel2);
+                return m1 && m2;
+            });
+
+            // Re-format arrays for Vizzu data series matrix input
+            const dataSeries = {
+                series: [
+                    { name: keyCol1, type: 'dimension', values: filtered.map(d => String(d[keyCol1])) },
+                    { name: keyCol2, type: 'dimension', values: filtered.map(d => String(d[keyCol2])) },
+                    { name: valCol, type: 'measure', values: filtered.map(d => Number(d[valCol]) || 0) }
+                ]
+            };
+
+            // Trigger the absolute fluid morph layout animation frames!
+            await chart.animate({
+                data: dataSeries,
+                config: {
+                    channels: {
+                        y: { set: [valCol] },
+                        x: { set: [keyCol2] },
+                        color: { set: [keyCol1] }
+                    },
+                    title: `Dynamic Metrics Flow Analysis`,
+                    geometry: 'rectangle'
+                },
+                style: {
+                    title: { fontSize: '14px', color: '#94a3b8' },
+                    plot: {
+                        marker: { colorPalette: '#c084fc #6366f1 #38bdf8 #34d399 #f472b6' },
+                        xAxis: { label: { color: '#94a3b8' } },
+                        yAxis: { label: { color: '#94a3b8' } }
+                    }
+                }
+            }, isFirstLoad ? 0 : 800); // 800ms liquid-smooth canvas morph time window
+        }
+    </script>
+</body>
+</html>
