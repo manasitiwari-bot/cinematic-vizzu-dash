@@ -1,0 +1,154 @@
+import streamlit as st
+import plotly.graph_objects as go
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(
+    page_title="Energy Monitoring System",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# ---------------- COLORS ----------------
+GREEN = "#2ecc71"
+DARK_GREEN = "#1abc9c"
+BG = "#0f4c5c"
+
+# ---------------- MOCK DATA ----------------
+time = pd.date_range(
+    start=datetime.now() - timedelta(minutes=60),
+    periods=60,
+    freq="1min"
+)
+
+df = pd.DataFrame({
+    "time": time,
+    "power_kw": np.random.uniform(18, 22, 60),
+    "reactive_kvar": np.random.uniform(2, 4, 60),
+    "apparent_kva": np.random.uniform(20, 24, 60)
+})
+
+kwh_values = np.random.randint(10, 80, 24)
+
+# ---------------- KPI COLUMN ----------------
+kpi_col, main_col = st.columns([1, 4])
+
+with kpi_col:
+    st.markdown(
+        f"""
+        <div style="background:{BG};padding:20px;border-radius:10px;color:white">
+        <h4>Energy Consumption</h4>
+        <h2>73,583.384 Units</h2>
+        <hr>
+        <p>Cost Prediction (Monthly)</p>
+        <h4>₹ 5,198.863</h4>
+        <hr>
+        <p>Voltage</p>
+        <h4>405.77 V</h4>
+        <p>Current</p>
+        <h4>6.39 A</h4>
+        <p>Frequency</p>
+        <h4>50.07 Hz</h4>
+        <p>Unbalance Current</p>
+        <h4>127.45 %</h4>
+        <p>Total Breakdown</p>
+        <h4>0 Nos.</h4>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+# ---------------- MAIN DASHBOARD ----------------
+with main_col:
+
+    # ---- KWH BAR CHART ----
+    fig_kwh = go.Figure()
+    fig_kwh.add_bar(
+        y=kwh_values,
+        marker_color=GREEN
+    )
+    fig_kwh.update_layout(
+        title="KWH",
+        height=220,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    st.plotly_chart(fig_kwh, use_container_width=True)
+
+    # ---- POWER CHART ----
+    fig_power = go.Figure()
+    fig_power.add_trace(go.Scatter(
+        x=df["time"],
+        y=df["power_kw"],
+        mode="lines",
+        name="Active (kW)",
+        line=dict(color="red")
+    ))
+    fig_power.update_layout(
+        title="Power (KW)",
+        height=180,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    st.plotly_chart(fig_power, use_container_width=True)
+
+    # ---- REACTIVE POWER ----
+    fig_reactive = go.Figure()
+    fig_reactive.add_trace(go.Scatter(
+        x=df["time"],
+        y=df["reactive_kvar"],
+        mode="lines",
+        name="Reactive (kVAR)",
+        line=dict(color="green")
+    ))
+    fig_reactive.update_layout(
+        title="Reactive Power (KVAR)",
+        height=180,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    st.plotly_chart(fig_reactive, use_container_width=True)
+
+    # ---- APPARENT POWER ----
+    fig_apparent = go.Figure()
+    fig_apparent.add_trace(go.Scatter(
+        x=df["time"],
+        y=df["apparent_kva"],
+        mode="lines",
+        name="Apparent (kVA)",
+        line=dict(color="blue")
+    ))
+    fig_apparent.update_layout(
+        title="Apparent Power (KVA)",
+        height=180,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    st.plotly_chart(fig_apparent, use_container_width=True)
+
+# ---------------- GAUGES ----------------
+g1, g2 = st.columns(2)
+
+with g1:
+    fig_pf = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=0.94,
+        title={"text": "Power Factor"},
+        gauge={
+            "axis": {"range": [0, 1]},
+            "bar": {"color": GREEN},
+        }
+    ))
+    fig_pf.update_layout(height=300)
+    st.plotly_chart(fig_pf, use_container_width=True)
+
+with g2:
+    fig_usage = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=90.23,
+        title={"text": "Total Usage"},
+        gauge={
+            "axis": {"range": [0, 100]},
+            "bar": {"color": DARK_GREEN},
+        }
+    ))
+    fig_usage.update_layout(height=300)
+    st.plotly_chart(fig_usage, use_container_width=True)
